@@ -1,14 +1,20 @@
 <?php
-// config.php - Database connection configuration
 
-$DB_HOST = "localhost";
-$DB_USER = "root";
-$DB_PASS = "";
-$DB_NAME = "seekho_db";
+$host = "mysql-2033ca9-seekhoapi.c.aivencloud.com";
+$port = 23785;
+$dbname = "defaultdb";
+$username = "avnadmin";
+$password = getenv('DB_PASS'); // from Render env
 
-$conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
-
-if ($conn->connect_error) {
-    die("Database connection failed: " . $conn->connect_error);
+try {
+    $conn = new PDO(
+        "mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4",
+        $username,
+        $password,
+        [
+            PDO::MYSQL_ATTR_SSL_CA => '/etc/ssl/certs/ca-certificates.crt'
+        ]
+    );
+} catch (PDOException $e) {
+    die("Connection failed: " . $e->getMessage());
 }
-?>
