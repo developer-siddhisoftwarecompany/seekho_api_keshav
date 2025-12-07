@@ -1,10 +1,10 @@
 <?php
-// helpers.php - Common helper functions for all APIs
+// helpers.php
 
 // Always return JSON
 header("Content-Type: application/json");
 
-// CORS headers (optional, useful for mobile / web apps)
+// CORS headers
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization, App-Version, Platform");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
@@ -25,7 +25,7 @@ function getJsonInput() {
     return $data;
 }
 
-// Get a specific header (case-insensitive)
+// Get header (case-insensitive)
 function getHeader($name) {
     $headers = getallheaders();
     foreach ($headers as $key => $value) {
@@ -59,6 +59,7 @@ function requireMethod($method) {
 
 // Require Authorization: Bearer <token>
 function requireAuth($conn) {
+
     $authHeader = getHeader("Authorization");
     if (!$authHeader) {
         sendResponse(false, "Missing Authorization header", null, 401);
@@ -73,18 +74,22 @@ function requireAuth($conn) {
         sendResponse(false, "Token missing", null, 401);
     }
 
-    // Lookup user by token
-    $stmt = $conn->prepare("SELECT id, name, email FROM users WHERE api_token = ?");
-    $stmt->bind_param("s", $token);
+    // Lookup user by token with PDO
+    $stmt = $conn->prepare("
+        SELECT id, name, email 
+        FROM users 
+        WHERE api_token = :token 
+        LIMIT 1
+    ");
+    $stmt->bindValue(':token', $token);
     $stmt->execute();
-    $result = $stmt->get_result();
 
-    if ($result->num_rows === 0) {
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) {
         sendResponse(false, "Invalid or expired token", null, 401);
     }
 
-    $user = $result->fetch_assoc();
-    $stmt->close();
-    return $user; // return user row
+    return $user;
 }
 ?>
