@@ -2,7 +2,6 @@
 require 'config.php';
 require 'helpers.php';
 
-// Reset user password
 // Endpoint: /auth/reset-password
 // Method: POST
 
@@ -17,15 +16,23 @@ if ($email === '' || $new_password === '') {
 
 $hashed = password_hash($new_password, PASSWORD_BCRYPT);
 
-$stmt = $conn->prepare('UPDATE users SET password = ?, reset_otp = NULL, reset_otp_expires = NULL WHERE email = ?');
-$stmt->bind_param('ss', $hashed, $email);
+// Update password, clear OTP
+$stmt = $conn->prepare("
+    UPDATE users 
+    SET password = :password,
+        reset_otp = NULL,
+        reset_otp_expires = NULL
+    WHERE email = :email
+");
+
+$stmt->bindValue(':password', $hashed);
+$stmt->bindValue(':email', $email);
 $stmt->execute();
 
-if ($stmt->affected_rows > 0) {
-    $stmt->close();
+// PDO affected rows:
+if ($stmt->rowCount() > 0) {
     sendResponse(true, 'Password reset successful');
 } else {
-    $stmt->close();
     sendResponse(false, 'Password reset failed or email not found', null, 400);
 }
 ?>
