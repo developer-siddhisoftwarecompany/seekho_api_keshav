@@ -2,7 +2,6 @@
 require 'config.php';
 require 'helpers.php';
 
-// Register new user
 // Endpoint: /auth/signup
 // Method: POST
 
@@ -18,36 +17,39 @@ if ($name === '' || $email === '' || $password === '') {
     sendResponse(false, 'Name, email and password are required', null, 400);
 }
 
-// Hash password
+// Hash password securely
 $hashed = password_hash($password, PASSWORD_BCRYPT);
 
-// Check if user exists
-$stmt = $conn->prepare('SELECT id FROM users WHERE email = ?');
-$stmt->bind_param('s', $email);
+// Check if email already exists
+$stmt = $conn->prepare("SELECT id FROM users WHERE email = :email LIMIT 1");
+$stmt->bindValue(':email', $email);
 $stmt->execute();
-$stmt->store_result();
 
-if ($stmt->num_rows > 0) {
-    $stmt->close();
+if ($stmt->fetch(PDO::FETCH_ASSOC)) {
     sendResponse(false, 'Email already registered', null, 409);
 }
-$stmt->close();
 
-// Insert user
-$stmt = $conn->prepare('INSERT INTO users (name, email, password) VALUES (?, ?, ?)');
-$stmt->bind_param('sss', $name, $email, $hashed);
+// Insert new user
+$stmt = $conn->prepare("
+    INSERT INTO users (name, email, password) 
+    VALUES (:name, :email, :password)
+");
+
+$stmt->bindValue(':name', $name);
+$stmt->bindValue(':email', $email);
+$stmt->bindValue(':password', $hashed);
 
 if ($stmt->execute()) {
-    $user_id = $stmt->insert_id;
-    $stmt->close();
+
+    $user_id = $conn->lastInsertId();
+
     sendResponse(true, 'Signup successful', [
-        'user_id' => $user_id,
+        'user_id' => (int) $user_id,
         'email'   => $email,
         'name'    => $name
     ]);
+
 } else {
-    $err = $conn->error;
-    $stmt->close();
-    sendResponse(false, 'Signup failed: ' . $err, null, 500);
+    sendResponse(false, 'Signup failed', null, 500);
 }
 ?>
