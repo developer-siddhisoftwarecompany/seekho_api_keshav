@@ -2,16 +2,23 @@
 require 'config.php';
 require 'helpers.php';
 
-// Get homepage top videos
 // Endpoint: /home/top-videos
 // Method: GET
 
 requireMethod('GET');
 
-// TODO: Implement actual logic using $conn and any query parameters / headers
-sendResponse(true, 'Stub GET response', {
-    "example": true,
-    "endpoint": "/home/top-videos",
-    "description": "Get homepage top videos"
-});
+// Simple "top videos" logic (latest videos)
+$stmt = $conn->prepare("
+    SELECT id, title, thumbnail, video_url, category_id
+    FROM videos
+    ORDER BY id DESC
+    LIMIT 10
+");
+$stmt->execute();
+
+$videos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+sendResponse(true, "Top videos", [
+    "videos" => $videos
+]);
 ?>
