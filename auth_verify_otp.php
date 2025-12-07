@@ -6,44 +6,39 @@ require 'helpers.php';
 // Method: POST
 
 requireMethod('POST');
-
-$data = getJsonInput();
-
+$data  = getJsonInput();
 $email = trim($data['email'] ?? '');
-$otp   = trim($data['otp']   ?? '');
+$otp   = intval($data['otp'] ?? 0);
 
-if ($email === '' || $otp === '') {
+if ($email === '' || !$otp) {
     sendResponse(false, 'Email and OTP are required', null, 400);
 }
 
-// Find matching user and valid OTP
+// Fetch user
 $stmt = $conn->prepare("
-    SELECT id 
+    SELECT id, reset_otp, reset_otp_expires 
     FROM users 
-    WHERE email = :email 
-      AND reset_otp = :otp 
-      AND reset_otp_expires > NOW()
+    WHERE email = :email
     LIMIT 1
 ");
 $stmt->bindValue(':email', $email);
-$stmt->bindValue(':otp', $otp);
 $stmt->execute();
 
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$user) {
-    sendResponse(false, 'Invalid or expired OTP', null, 400);
+    sendResponse(false, 'Invalid email', null, 404);
 }
 
-// Clear OTP after success
-$stmt = $conn->prepare("
-    UPDATE users
-    SET reset_otp = NULL,
-        reset_otp_expires = NULL
-    WHERE id = :id
-");
-$stmt->bindValue(':id', $user['id'], PDO::PARAM_INT);
-$stmt->execute();
+// Check OTP match
+if ((int)$user['reset_otp'] !== $otp) {
+    sendResponse(false, 'Invalid OTP', null, 400);
+}
 
-sendResponse(true, 'OTP verified successfully');
+// Check expiry
+if ($user['reset_otp_expires'] && strtotime($user['reset_otp_expires']) < time()) {
+    sendResponse(false, 'OTP expired', null, 400);
+}
+
+sendResponse(true, 'OTP verified. You can now reset password.');
 ?>
