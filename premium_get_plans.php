@@ -2,16 +2,22 @@
 require 'config.php';
 require 'helpers.php';
 
-// Fetch available subscription plans
 // Endpoint: /premium/plans
 // Method: GET
 
 requireMethod('GET');
 
-// TODO: Implement actual logic using $conn and any query parameters / headers
-sendResponse(true, 'Stub GET response', {
-    "example": true,
-    "endpoint": "/premium/plans",
-    "description": "Fetch available subscription plans"
-});
+// Fetch plans from DB
+$stmt = $conn->prepare("
+    SELECT id, plan_name, price, duration_days
+    FROM plans
+    ORDER BY price ASC
+");
+$stmt->execute();
+
+$plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+sendResponse(true, "Plans fetched", [
+    "plans" => $plans
+]);
 ?>
