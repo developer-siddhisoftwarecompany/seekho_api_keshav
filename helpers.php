@@ -6,7 +6,7 @@ header("Content-Type: application/json");
 
 // CORS headers
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, App-Version, Platform");
+header("Access-Control-Allow-Headers: Authorization, App-Version, Platform");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
 // Handle preflight request
@@ -15,13 +15,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Read JSON body
+// Read JSON OR form body (WITHOUT requiring Content-Type header)
 function getJsonInput() {
     $raw = file_get_contents("php://input");
     $data = json_decode($raw, true);
-    if (!is_array($data)) {
-        $data = [];
+
+    // JSON failed or empty → fallback to POST
+    if (!is_array($data) || empty($data)) {
+        $data = $_POST;
     }
+
     return $data;
 }
 
